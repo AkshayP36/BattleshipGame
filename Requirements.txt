@@ -1,0 +1,233 @@
+Battleship Game Class Diagram
+Unsolved
+Design class diagram for a software version of the traditional Battleship game.The diagram should accurately represent the game's components, rules, and interactions.
+
+Description of Battleship Game Rules and Steps:
+
+Game Setup:
+    The game is played on two grids for each player: one for their own ships and one for tracking shots against the opponent.
+    Each player secretly arranges ships on their grid. Ships can only be placed vertically or horizontally, not diagonally.
+    The standard fleet includes a variety of ships (e.g., Aircraft Carrier, Battleship, Submarine, Destroyer, Patrol Boat), each occupying a different number of consecutive squares.
+    Gameplay:
+    Players take turns firing shots to attempt to hit the opponent's ships.
+    After a shot, the opponent must respond with "hit" or "miss."
+    If all squares of a ship are hit, the ship is sunk. The player should announce the sinking (e.g., "You sunk my battleship!").
+    Winning the Game:
+    The game ends when a player has sunk all of their opponent's ships.
+    The first player to sink all of the opponent’s ships wins the game.
+
+
+
+
+class Game {
+  attributes:
+    - id: Integer
+    - players: Player[2]
+    - currentPlayer: Player
+    - turnManager: TurnManager
+    - state: GameState
+    - winner: Player
+    - winningStrategy: WinningStrategy
+    - observers: List<GameObserver>
+
+  methods:
+    + startNewGame(): void
+    + playTurn(target: Coordinate): ShotResult
+    + validateShot(target: Coordinate): Boolean
+    + checkWinner(): Player
+    + getCurrentState(): String
+    + addObserver(observer: GameObserver): void
+    - notifyObservers(shot: Shot): void
+    - switchPlayer(): void
+}
+
+class Player {
+  attributes:
+    - id: Integer
+    - name: String
+    - email: String
+    - ownBoard: Board
+    - trackingGrid: TrackingGrid
+    - placementStrategy: PlacementStrategy
+
+  methods:
+    + getName(): String
+    + setName(name: String): void
+    + getEmail(): String
+    + setEmail(email: String): void
+    + placeFleet(): void
+    + fireAt(opponent: Player, target: Coordinate): Shot
+    + hasLost(): Boolean
+}
+
+class TurnManager {
+  attributes:
+    - currentPlayer: Player
+    - history: List<Shot>
+
+  methods:
+    + getCurrentPlayer(): Player
+    + switchTurn(): void
+    + recordShot(shot: Shot): void
+    + getHistory(): List<Shot>
+}
+
+class Board {
+  attributes:
+    - rows: Integer          // 10
+    - cols: Integer          // 10
+    - cells: Cell[10][10]
+    - fleet: List<Ship>
+
+  methods:
+    + placeShip(ship: Ship, start: Coordinate, orientation: Orientation): Boolean
+    + receiveShot(target: Coordinate): ShotResult
+    + allShipsSunk(): Boolean
+    + display(): String
+    - isValidPlacement(ship: Ship, start: Coordinate, orientation: Orientation): Boolean
+}
+
+class TrackingGrid {
+  attributes:
+    - rows: Integer
+    - cols: Integer
+    - marks: CellState[10][10]
+
+  methods:
+    + mark(target: Coordinate, result: ShotResult): void
+    + alreadyShot(target: Coordinate): Boolean
+    + display(): String
+}
+
+class Cell {
+  attributes:
+    - position: Coordinate
+    - state: CellState
+    - ship: Ship             // null if empty
+
+  methods:
+    + isOccupied(): Boolean
+    + getShip(): Ship
+    + setShip(ship: Ship): void
+    + getState(): CellState
+    + setState(state: CellState): void
+}
+
+class Coordinate {
+  attributes:
+    - row: Integer
+    - col: Integer
+
+  methods:
+    + getRow(): Integer
+    + getCol(): Integer
+    + equals(other: Coordinate): Boolean
+}
+
+class Ship {
+  attributes:
+    - id: Integer
+    - type: ShipType
+    - orientation: Orientation
+    - positions: List<Coordinate>
+    - hits: Integer
+
+  methods:
+    + getSize(): Integer
+    + registerHit(): void
+    + isSunk(): Boolean
+    + getType(): ShipType
+}
+
+class ShipFactory {
+  attributes:
+    (none)
+
+  methods:
+    + createShip(type: ShipType): Ship
+    + createFleet(): List<Ship>
+}
+
+class Shot {
+  attributes:
+    - shooter: Player
+    - target: Coordinate
+    - result: ShotResult
+
+  methods:
+    + getShooter(): Player
+    + getTarget(): Coordinate
+    + getResult(): ShotResult
+}
+
+enum ShipType {
+  AIRCRAFT_CARRIER(5), BATTLESHIP(4), SUBMARINE(3), DESTROYER(3), PATROL_BOAT(2)
+  methods:
+    + getSize(): Integer
+}
+
+enum Orientation {
+  HORIZONTAL, VERTICAL
+}
+
+enum ShotResult {
+  HIT, MISS, SUNK
+}
+
+enum CellState {
+  EMPTY, SHIP, HIT, MISS
+}
+
+enum GameState {
+  SETUP, IN_PROGRESS, FINISHED
+}
+
+interface WinningStrategy {
+  methods:
+    + isWinner(player: Player, opponent: Player): Boolean
+}
+
+class AllShipsSunkStrategy implements WinningStrategy {
+  methods:
+    + isWinner(player: Player, opponent: Player): Boolean
+}
+
+interface PlacementStrategy {
+  methods:
+    + place(board: Board, fleet: List<Ship>): void
+}
+
+class ManualPlacement implements PlacementStrategy {
+  methods:
+    + place(board: Board, fleet: List<Ship>): void
+}
+
+class RandomPlacement implements PlacementStrategy {
+  methods:
+    + place(board: Board, fleet: List<Ship>): void
+}
+
+interface GameObserver {
+  methods:
+    + onShot(shot: Shot): void
+    + onShipSunk(ship: Ship, owner: Player): void
+    + onGameOver(winner: Player): void
+}
+
+class ConsoleView implements GameObserver {
+  methods:
+    + onShot(shot: Shot): void
+    + onShipSunk(ship: Ship, owner: Player): void
+    + onGameOver(winner: Player): void
+}
+
+
+
+
+Design patterns
+
+Strategy (WinningStrategy): the win condition sits behind an interface, so Game doesn't hard-code "all ships sunk".
+Strategy (PlacementStrategy): ships can be placed manually or randomly, for example by a computer opponent.
+Factory (ShipFactory): builds the standard fleet of 5, 4, 3, 3 and 2 cells in one place.
+Observer (GameObserver): the UI is told about hits, misses, sinkings and game over, so game logic never prints anything itself.
+Facade (Game): the UI calls only playTurn() and never touches Board or Ship directly.
